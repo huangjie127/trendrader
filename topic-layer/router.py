@@ -10,12 +10,10 @@ Topic Layer Router - 主题再索引系统
 4. 实现幂等性（去重）
 """
 
-import os
 import sys
 import sqlite3
 import yaml
 import re
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 from collections import defaultdict
@@ -79,6 +77,7 @@ class TopicRouter:
         print(f"✓ 找到 {len(db_files)} 个数据库文件")
         
         for db_file in db_files:
+            conn = None
             try:
                 conn = sqlite3.connect(str(db_file))
                 cursor = conn.cursor()
@@ -111,12 +110,14 @@ class TopicRouter:
                         'summary': None
                     })
                 
-                conn.close()
                 print(f"  - {db_file.name}: {len(rows)} 条记录")
                 
             except Exception as e:
                 print(f"  ✗ 读取 {db_file.name} 失败: {e}")
                 continue
+            finally:
+                if conn:
+                    conn.close()
         
         print(f"✓ 共读取 {len(all_trends)} 条趋势数据")
         return all_trends
