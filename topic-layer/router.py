@@ -241,8 +241,8 @@ class TopicRouter:
                 url = trend['url']
                 summary = trend['summary'] or "（无摘要）"
                 
-                new_content.append(f"\n**标题**：{title}  ")
-                new_content.append(f"**来源**：{source}  ")
+                new_content.append(f"\n**标题**：{title}  \n")
+                new_content.append(f"**来源**：{source}  \n")
                 new_content.append(f"**链接**：{url}\n")
                 new_content.append(f"\n**摘要**：  \n{summary}\n")
                 new_content.append(f"\n**我的判断**：  \n（留空，供人工补充）\n")
