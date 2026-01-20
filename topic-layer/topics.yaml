@@ -1,0 +1,24 @@
+ai_finance:
+  name: AI 对金融体系与劳动力市场的影响
+  description: >
+    长期追踪人工智能在银行、交易、风控、会计、
+    金融就业结构中的影响。
+  keywords:
+    - AI
+    - artificial intelligence
+    - finance
+    - banking
+    - trading
+    - labor
+    - employment
+
+climate_tech:
+  name: 气候科技与碳中和
+  description: >
+    追踪碳捕捉、新能源、气候政策、ESG 投资等领域的技术突破与政策变化。
+  keywords:
+    - climate
+    - carbon
+    - renewable energy
+    - ESG
+    - net zero
