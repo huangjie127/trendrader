@@ -22,8 +22,14 @@ from collections import defaultdict
 
 
 class TopicRouter:
-    def __init__(self, base_dir: str = None):
-        """初始化路由器"""
+    def __init__(self, base_dir: str = None, output_dir: str = None):
+        """
+        初始化路由器
+        
+        Args:
+            base_dir: Topic Layer 基础目录（默认为脚本所在目录）
+            output_dir: TrendRadar 输出目录（默认为 ../output/news）
+        """
         if base_dir is None:
             # 默认使用脚本所在目录
             base_dir = Path(__file__).parent
@@ -34,8 +40,11 @@ class TopicRouter:
         self.topics_file = base_dir / "topics.yaml"
         self.index_dir = base_dir / "index"
         
-        # TrendRadar 输出目录
-        self.output_dir = base_dir.parent / "output" / "news"
+        # TrendRadar 输出目录（可配置）
+        if output_dir is None:
+            self.output_dir = base_dir.parent / "output" / "news"
+        else:
+            self.output_dir = Path(output_dir)
         
         self.topics = {}
         
@@ -95,10 +104,11 @@ class TopicRouter:
                     title, url, crawl_time, source = row
                     all_trends.append({
                         'title': title,
-                        'url': url or '',
+                        'url': url if url else None,  # 保持 None 以便正确处理
                         'date': date,
                         'source': source,
-                        'summary': ''  # 数据库中没有 summary 字段
+                        # summary 字段保留以兼容 timeline 格式
+                        'summary': None
                     })
                 
                 conn.close()
@@ -216,10 +226,15 @@ class TopicRouter:
         existing_urls = self.load_existing_urls(timeline_file)
         
         # 过滤出新的趋势（去重）
-        new_trends = [
-            trend for trend in trends 
-            if trend['url'] and trend['url'] not in existing_urls
-        ]
+        # 只对有 URL 的趋势进行去重，无 URL 的趋势保留
+        new_trends = []
+        for trend in trends:
+            if trend['url'] is None:
+                # 无 URL 的趋势总是保留（无法去重）
+                new_trends.append(trend)
+            elif trend['url'] not in existing_urls:
+                # 有 URL 且不在已存在列表中的趋势
+                new_trends.append(trend)
         
         if not new_trends:
             print(f"  - {topic_id}: 没有新的趋势需要添加")
@@ -238,8 +253,8 @@ class TopicRouter:
             for trend in grouped[date]:
                 title = trend['title']
                 source = trend['source']
-                url = trend['url']
-                summary = trend['summary'] or "（无摘要）"
+                url = trend['url'] if trend['url'] else "（无链接）"
+                summary = trend['summary'] if trend['summary'] else "（无摘要）"
                 
                 new_content.append(f"\n**标题**：{title}  \n")
                 new_content.append(f"**来源**：{source}  \n")
@@ -252,19 +267,27 @@ class TopicRouter:
         if timeline_file.exists():
             with open(timeline_file, 'r', encoding='utf-8') as f:
                 existing_content = f.read()
+            
+            # 找到第一行标题后的位置（更健壮的解析）
+            lines = existing_content.split('\n')
+            header_end_line = 0
+            for i, line in enumerate(lines):
+                if line.startswith('#'):
+                    header_end_line = i + 1
+                    break
+            
+            # 重新组合内容
+            header_lines = lines[:header_end_line]
+            body_lines = lines[header_end_line:]
+            
+            final_content = (
+                '\n'.join(header_lines) + '\n' +
+                ''.join(new_content) +
+                '\n'.join(body_lines)
+            )
         else:
-            existing_content = f"# {topic_name}\n"
-        
-        # 将新内容插入到标题后面（最新的在上面）
-        header_end = existing_content.find('\n', existing_content.find('#')) + 1
-        if header_end <= 0:
-            header_end = len(existing_content)
-        
-        final_content = (
-            existing_content[:header_end] +
-            ''.join(new_content) +
-            existing_content[header_end:]
-        )
+            # 新文件，直接创建
+            final_content = f"# {topic_name}\n" + ''.join(new_content)
         
         # 写入文件
         with open(timeline_file, 'w', encoding='utf-8') as f:
